@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ABYSSAL ENTITY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  #mainCanvas {
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 1;
+  }
+
+  #glowCanvas {
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 2;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    filter: blur(8px);
+    opacity: 0.6;
+  }
+
+  #ui {
+    position: fixed;
+    z-index: 10;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  /* Corner brackets */
+  .corner {
+    position: absolute;
+    width: 60px; height: 60px;
+    pointer-events: none;
+  }
+  .corner::before, .corner::after {
+    content: '';
+    position: absolute;
+    background: #0ff;
+    box-shadow: 0 0 8px #0ff, 0 0 20px #0ff;
+  }
+  .corner::before { width: 100%; height: 2px; top: 0; left: 0; }
+  .corner::after  { width: 2px; height: 100%; top: 0; left: 0; }
+  .corner.tr { top: 20px; right: 20px; transform: rotate(90deg); }
+  .corner.tl { top: 20px; left: 20px; }
+  .corner.bl { bottom: 20px; left: 20px; transform: rotate(270deg); }
+  .corner.br { bottom: 20px; right: 20px; transform: rotate(180deg); }
+
+  /* HUD top */
+  #hud-top {
+    position: absolute;
+    top: 28px; left: 90px; right: 90px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0,255,255,0.2);
+    padding-bottom: 8px;
+  }
+
+  #title-text {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 30px #0af;
+    animation: flicker 4s infinite;
+  }
+
+  @keyframes flicker {
+    0%,95%,100% { opacity: 1; }
+    96% { opacity: 0.4; }
+    97% { opacity: 1; }
+    98% { opacity: 0.2; }
+    99% { opacity: 0.9; }
+  }
+
+  .hud-stat {
+    font-size: 10px;
+    color: rgba(0,255,200,0.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .hud-stat span {
+    color: #0ff;
+    text-shadow: 0 0 6px #0ff;
+  }
+
+  /* HUD bottom */
+  #hud-bottom {
+    position: absolute;
+    bottom: 28px; left: 90px; right: 90px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 1px solid rgba(0,255,255,0.2);
+    padding-top: 8px;
+  }
+
+  .bio-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bio-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: rgba(0,255,255,0.5);
+  }
+  .bio-bar {
+    width: 120px;
+    height: 3px;
+    background: rgba(0,255,255,0.1);
+    border: 1px solid rgba(0,255,255,0.3);
+    overflow: hidden;
+  }
+  .bio-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0af, #0ff, #aff);
+    box-shadow: 0 0 8px #0ff;
+    transition: width 0.2s;
+  }
+
+  #status-text {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: rgba(0,255,100,0.5);
+    animation: blink 1.5s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* Scanlines overlay */
+  #scanlines {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 8;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+  }
+
+  /* Vignette */
+  #vignette {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 7;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.85) 100%);
+  }
+
+  /* Entity selector */
+  #selector {
+    position: absolute;
+    bottom: 60px; right: 90px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: all;
+  }
+  .sel-label {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(0,255,255,0.4);
+    text-align: right;
+    margin-bottom: 4px;
+  }
+  .sel-btn {
+    background: transparent;
+    border: 1px solid rgba(0,255,255,0.25);
+    color: rgba(0,255,200,0.6);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    cursor: pointer;
+    text-align: right;
+    transition: all 0.2s;
+  }
+  .sel-btn:hover, .sel-btn.active {
+    background: rgba(0,255,255,0.08);
+    border-color: #0ff;
+    color: #0ff;
+    text-shadow: 0 0 8px #0ff;
+    box-shadow: 0 0 12px rgba(0,255,255,0.2);
+  }
+
+  /* Mouse crosshair hint */
+  #crosshair {
+    position: fixed;
+    pointer-events: none;
+    z-index: 20;
+    width: 20px; height: 20px;
+    margin-left: -10px; margin-top: -10px;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(0,255,255,0.7);
+    box-shadow: 0 0 4px #0ff;
+  }
+  #crosshair::before { width: 100%; height: 1px; top: 50%; left: 0; }
+  #crosshair::after  { width: 1px; height: 100%; left: 50%; top: 0; }
+</style>
+</head>
+<body>
+
+<canvas id="mainCanvas"></canvas>
+<canvas id="glowCanvas"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="crosshair"></div>
+
+<div id="ui">
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <div id="hud-top">
+    <div id="title-text">ABYSSAL ENTITY</div>
+    <div class="hud-stat">SEGMENTS &nbsp;<span id="seg-count">0</span></div>
+    <div class="hud-stat">LIMBS &nbsp;<span id="limb-count">0</span></div>
+    <div class="hud-stat">VEL &nbsp;<span id="vel-display">0.00</span></div>
+  </div>
+
+  <div id="hud-bottom">
+    <div id="status-text">◉ ENTITY ACTIVE</div>
+    <div class="bio-bar-wrap">
+      <div class="bio-label">NEURAL SYNC</div>
+      <div class="bio-bar"><div class="bio-fill" id="bar1" style="width:80%"></div></div>
+      <div class="bio-label">BIO OUTPUT</div>
+      <div class="bio-bar"><div class="bio-fill" id="bar2" style="width:60%"></div></div>
+    </div>
+  </div>
+
+  <div id="selector">
+    <div class="sel-label">// SELECT FORM</div>
+    <button class="sel-btn" onclick="spawnRandom()">RANDOM ENTITY</button>
+    <button class="sel-btn" onclick="spawnCentipede()">CENTIPEDE</button>
+    <button class="sel-btn" onclick="spawnSpider()">SPIDER</button>
+    <button class="sel-btn" onclick="spawnSerpent()">SERPENT</button>
+  </div>
+</div>
+
+<script>
+// ─── INPUT ───────────────────────────────────────────────────────────────────
+var Input = { keys: [], mouse: { left:false, right:false, x:0, y:0 } };
+for (var i = 0; i < 230; i++) Input.keys.push(false);
+document.addEventListener("keydown", e => Input.keys[e.keyCode] = true);
+document.addEventListener("keyup",   e => Input.keys[e.keyCode] = false);
+document.addEventListener("mousedown", e => { if(e.button===0) Input.mouse.left=true; });
+document.addEventListener("mouseup",   e => { if(e.button===0) Input.mouse.left=false; });
+document.addEventListener("mousemove", e => {
+  Input.mouse.x = e.clientX;
+  Input.mouse.y = e.clientY;
+  crosshair.style.left = e.clientX + 'px';
+  crosshair.style.top  = e.clientY + 'px';
+});
+
+// ─── CANVAS SETUP ────────────────────────────────────────────────────────────
+var canvas = document.getElementById('mainCanvas');
+var glowCanvas = document.getElementById('glowCanvas');
+var crosshair = document.getElementById('crosshair');
+
+function resize() {
+  canvas.width = glowCanvas.width = window.innerWidth;
+  canvas.height = glowCanvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+var ctx = canvas.getContext('2d');
+var gctx = glowCanvas.getContext('2d');
+
+// ─── COLOR PALETTE ───────────────────────────────────────────────────────────
+// Bioluminescent theme: cyan, teal, electric blue, sickly green
+const COLORS = {
+  body:    '#00ffff',
+  bodyDim: '#004455',
+  joint:   '#00ffcc',
+  leg:     '#00ff88',
+  glow:    '#0088ff',
+  accent:  '#ff00aa',
+};
+
+// ─── PARTICLES ───────────────────────────────────────────────────────────────
+var particles = [];
+function spawnParticle(x, y, color) {
+  particles.push({
+    x, y, color,
+    vx: (Math.random()-0.5)*2,
+    vy: (Math.random()-0.5)*2,
+    life: 1, decay: 0.03 + Math.random()*0.05,
+    size: 1 + Math.random()*2
+  });
+}
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  for (var p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.life -= p.decay;
+    p.vy += 0.03; // gravity
+  }
+}
+function drawParticles(c) {
+  for (var p of particles) {
+    c.save();
+    c.globalAlpha = p.life * 0.8;
+    c.fillStyle = p.color;
+    c.shadowBlur = 8;
+    c.shadowColor = p.color;
+    c.beginPath();
+    c.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    c.fill();
+    c.restore();
+  }
+}
+
+// ─── SEGMENT ─────────────────────────────────────────────────────────────────
+var segmentCount = 0;
+class Segment {
+  constructor(parent, size, angle, range, stiffness, color) {
+    segmentCount++;
+    this.isSegment = true;
+    this.parent = parent;
+    if (typeof parent.children == "object") parent.children.push(this);
+    this.children = [];
+    this.size = size;
+    this.relAngle = angle;
+    this.defAngle = angle;
+    this.absAngle = parent.absAngle + angle;
+    this.range = range;
+    this.stiffness = stiffness;
+    this.color = color || COLORS.body;
+    this.glowColor = color || COLORS.glow;
+    this.updateRelative(false, true);
+    this.prevX = this.x;
+    this.prevY = this.y;
+  }
+  updateRelative(iter, flex) {
+    this.relAngle -= 2*Math.PI*Math.floor((this.relAngle-this.defAngle)/2/Math.PI+0.5);
+    if (flex) {
+      this.relAngle = Math.min(
+        this.defAngle + this.range/2,
+        Math.max(this.defAngle - this.range/2,
+          (this.relAngle - this.defAngle)/this.stiffness + this.defAngle
+        )
+      );
+    }
+    this.absAngle = this.parent.absAngle + this.relAngle;
+    this.x = this.parent.x + Math.cos(this.absAngle)*this.size;
+    this.y = this.parent.y + Math.sin(this.absAngle)*this.size;
+    if (iter) for (var c of this.children) c.updateRelative(iter, flex);
+  }
+  draw(iter) {
+    var dx = this.x - this.prevX, dy = this.y - this.prevY;
+    var speed = Math.sqrt(dx*dx+dy*dy);
+    // Glow layer
+    gctx.beginPath();
+    gctx.moveTo(this.parent.x, this.parent.y);
+    gctx.lineTo(this.x, this.y);
+    gctx.strokeStyle = this.glowColor;
+    gctx.lineWidth = this.size * 0.35 + 1;
+    gctx.globalAlpha = 0.4 + speed*0.04;
+    gctx.stroke();
+
+    // Main line
+    ctx.beginPath();
+    ctx.moveTo(this.parent.x, this.parent.y);
+    ctx.lineTo(this.x, this.y);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = Math.max(1, this.size * 0.18);
+    ctx.globalAlpha = 0.85;
+    ctx.stroke();
+
+    // Joint dot
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(1.5, this.size*0.12), 0, Math.PI*2);
+    ctx.fillStyle = COLORS.joint;
+    ctx.globalAlpha = 0.6;
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    gctx.globalAlpha = 1;
+
+    this.prevX = this.x; this.prevY = this.y;
+    if (iter) for (var c of this.children) c.draw(true);
+  }
+  follow(iter) {
+    var x = this.parent.x, y = this.parent.y;
+    var dist = Math.hypot(this.x-x, this.y-y);
+    this.x = x + this.size*(this.x-x)/dist;
+    this.y = y + this.size*(this.y-y)/dist;
+    this.absAngle = Math.atan2(this.y-y, this.x-x);
+    this.relAngle = this.absAngle - this.parent.absAngle;
+    this.updateRelative(false, true);
+    if (iter) for (var c of this.children) c.follow(true);
+  }
+}
+
+// ─── LIMB SYSTEM ─────────────────────────────────────────────────────────────
+class LimbSystem {
+  constructor(end, length, speed, creature) {
+    this.end = end;
+    this.length = Math.max(1, length);
+    this.creature = creature;
+    this.speed = speed;
+    creature.systems.push(this);
+    this.nodes = [];
+    var node = end;
+    for (var i = 0; i < length; i++) {
+      this.nodes.unshift(node);
+      node = node.parent;
+      if (!node.isSegment) { this.length = i+1; break; }
+    }
+    this.hip = this.nodes[0].parent;
+  }
+  moveTo(x, y) {
+    this.nodes[0].updateRelative(true, true);
+    var dist = Math.hypot(x-this.end.x, y-this.end.y);
+    var len = Math.max(0, dist - this.speed);
+    for (var i = this.nodes.length-1; i >= 0; i--) {
+      var node = this.nodes[i];
+      var ang = Math.atan2(node.y-y, node.x-x);
+      node.x = x + len*Math.cos(ang);
+      node.y = y + len*Math.sin(ang);
+      x = node.x; y = node.y; len = node.size;
+    }
+    for (var i = 0; i < this.nodes.length; i++) {
+      var node = this.nodes[i];
+      node.absAngle = Math.atan2(node.y-node.parent.y, node.x-node.parent.x);
+      node.relAngle = node.absAngle - node.parent.absAngle;
+      for (var c of node.children) {
+        if (!this.nodes.includes(c)) c.updateRelative(true, false);
+      }
+    }
+  }
+  update() { this.moveTo(Input.mouse.x, Input.mouse.y); }
+}
+
+// ─── LEG SYSTEM ──────────────────────────────────────────────────────────────
+class LegSystem extends LimbSystem {
+  constructor(end, length, speed, creature) {
+    super(end, length, speed, creature);
+    this.goalX = end.x; this.goalY = end.y;
+    this.step = 0;
+    this.forwardness = 0;
+    this.reach = 0.9*Math.hypot(this.end.x-this.hip.x, this.end.y-this.hip.y);
+    var relAngle = this.creature.absAngle - Math.atan2(this.end.y-this.hip.y, this.end.x-this.hip.x);
+    relAngle -= 2*Math.PI*Math.floor(relAngle/2/Math.PI+0.5);
+    this.swing = -relAngle + (2*(relAngle<0)-1)*Math.PI/2;
+    this.swingOffset = this.creature.absAngle - this.hip.absAngle;
+  }
+  update() {
+    this.moveTo(this.goalX, this.goalY);
+    if (this.step === 0) {
+      var dist = Math.hypot(this.end.x-this.goalX, this.end.y-this.goalY);
+      if (dist > 1) {
+        this.step = 1;
+        // Spawn step particle
+        if (Math.random() < 0.4)
+          spawnParticle(this.end.x, this.end.y, COLORS.leg);
+        this.goalX = this.hip.x + this.reach*Math.cos(this.swing+this.hip.absAngle+this.swingOffset)+(2*Math.random()-1)*this.reach/2;
+        this.goalY = this.hip.y + this.reach*Math.sin(this.swing+this.hip.absAngle+this.swingOffset)+(2*Math.random()-1)*this.reach/2;
+      }
+    } else {
+      var theta = Math.atan2(this.end.y-this.hip.y, this.end.x-this.hip.x) - this.hip.absAngle;
+      var dist = Math.hypot(this.end.x-this.hip.x, this.end.y-this.hip.y);
+      var forwardness2 = dist*Math.cos(theta);
+      var dF = this.forwardness - forwardness2;
+      this.forwardness = forwardness2;
+      if (dF*dF < 1) {
+        this.step = 0;
+        this.goalX = this.hip.x + (this.end.x-this.hip.x);
+        this.goalY = this.hip.y + (this.end.y-this.hip.y);
+      }
+    }
+  }
+}
+
+// ─── CREATURE ────────────────────────────────────────────────────────────────
+class Creature {
+  constructor(x,y,angle,fAccel,fFric,fRes,fThresh,rAccel,rFric,rRes,rThresh) {
+    this.x=x; this.y=y; this.absAngle=angle;
+    this.fSpeed=0; this.fAccel=fAccel; this.fFric=fFric; this.fRes=fRes; this.fThresh=fThresh;
+    this.rSpeed=0; this.rAccel=rAccel; this.rFric=rFric; this.rRes=rRes; this.rThresh=rThresh;
+    this.children=[]; this.systems=[];
+    this.trailX=[]; this.trailY=[];
+  }
+  follow(x, y) {
+    var dist = Math.hypot(this.x-x, this.y-y);
+    var angle = Math.atan2(y-this.y, x-this.x);
+    var accel = this.fAccel;
+    if (this.systems.length > 0) {
+      var sum = this.systems.reduce((a,s)=>a+(s.step===0), 0);
+      accel *= sum/this.systems.length;
+    }
+    this.fSpeed += accel*(dist > this.fThresh);
+    this.fSpeed *= 1 - this.fRes;
+    this.speed = Math.max(0, this.fSpeed - this.fFric);
+
+    var dif = this.absAngle - angle;
+    dif -= 2*Math.PI*Math.floor(dif/(2*Math.PI)+0.5);
+    if (Math.abs(dif) > this.rThresh && dist > this.fThresh) {
+      this.rSpeed -= this.rAccel*(2*(dif>0)-1);
+    }
+    this.rSpeed *= 1 - this.rRes;
+    if (Math.abs(this.rSpeed) > this.rFric) this.rSpeed -= this.rFric*(2*(this.rSpeed>0)-1);
+    else this.rSpeed = 0;
+
+    this.absAngle += this.rSpeed;
+    this.absAngle -= 2*Math.PI*Math.floor(this.absAngle/(2*Math.PI)+0.5);
+    this.x += this.speed*Math.cos(this.absAngle);
+    this.y += this.speed*Math.sin(this.absAngle);
+
+    // Trail
+    this.trailX.unshift(this.x); this.trailY.unshift(this.y);
+    if (this.trailX.length > 30) { this.trailX.pop(); this.trailY.pop(); }
+
+    this.absAngle += Math.PI;
+    for (var c of this.children) c.follow(true);
+    for (var s of this.systems) s.update(x, y);
+    this.absAngle -= Math.PI;
+    this.draw(true);
+  }
+  draw(iter) {
+    // Draw trail
+    if (this.trailX.length > 1) {
+      for (var i = 1; i < this.trailX.length; i++) {
+        var a = 1 - i/this.trailX.length;
+        gctx.beginPath();
+        gctx.moveTo(this.trailX[i-1], this.trailY[i-1]);
+        gctx.lineTo(this.trailX[i], this.trailY[i]);
+        gctx.strokeStyle = COLORS.glow;
+        gctx.lineWidth = 2*(1-i/this.trailX.length);
+        gctx.globalAlpha = a*0.3;
+        gctx.stroke();
+      }
+      gctx.globalAlpha = 1;
+    }
+
+    // Draw body head
+    var r = 6;
+    var ang = this.absAngle;
+    ctx.save();
+    ctx.strokeStyle = COLORS.body;
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = COLORS.glow;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, Math.PI/4+ang, 7*Math.PI/4+ang);
+    ctx.moveTo(this.x+r*Math.cos(7*Math.PI/4+ang), this.y+r*Math.sin(7*Math.PI/4+ang));
+    ctx.lineTo(this.x+r*Math.cos(ang)*Math.SQRT2, this.y+r*Math.sin(ang)*Math.SQRT2);
+    ctx.lineTo(this.x+r*Math.cos(Math.PI/4+ang), this.y+r*Math.sin(Math.PI/4+ang));
+    ctx.stroke();
+    ctx.restore();
+
+    if (iter) for (var c of this.children) c.draw(true);
+  }
+}
+
+// ─── SETUP FUNCTIONS ─────────────────────────────────────────────────────────
+var critter = null;
+var loopId = null;
+var frameCount = 0;
+
+function resetSim() {
+  if (loopId) clearInterval(loopId);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  gctx.clearRect(0,0,glowCanvas.width,glowCanvas.height);
+  particles = [];
+  segmentCount = 0;
+}
+
+function startLoop() {
+  loopId = setInterval(function() {
+    // Fade instead of clear for trail effect
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    gctx.clearRect(0,0,glowCanvas.width,glowCanvas.height);
+
+    // Draw grid faintly
+    drawGrid();
+
+    // Mouse target indicator
+    gctx.save();
+    gctx.strokeStyle = '#00ffff';
+    gctx.globalAlpha = 0.3 + 0.2*Math.sin(frameCount*0.1);
+    gctx.lineWidth = 1;
+    var mr = 8;
+    gctx.beginPath();
+    gctx.arc(Input.mouse.x, Input.mouse.y, mr, 0, Math.PI*2);
+    gctx.stroke();
+    gctx.globalAlpha = 0.15;
+    gctx.beginPath();
+    gctx.arc(Input.mouse.x, Input.mouse.y, mr*2.5, 0, Math.PI*2);
+    gctx.stroke();
+    gctx.restore();
+
+    updateParticles();
+    drawParticles(ctx);
+
+    if (critter) {
+      critter.follow(Input.mouse.x, Input.mouse.y);
+      // HUD updates
+      document.getElementById('seg-count').textContent = segmentCount;
+      document.getElementById('limb-count').textContent = critter.systems.length;
+      var vel = critter.speed ? critter.speed.toFixed(2) : '0.00';
+      document.getElementById('vel-display').textContent = vel;
+      var sync = Math.min(100, Math.round(critter.speed/critter.fAccel*100));
+      document.getElementById('bar1').style.width = (40+sync*0.6)+'%';
+      document.getElementById('bar2').style.width = (20+critter.systems.filter(s=>s.step===0).length/Math.max(1,critter.systems.length)*80)+'%';
+    }
+    frameCount++;
+  }, 30);
+}
+
+var gridFade = 0;
+function drawGrid() {
+  gridFade = (gridFade + 0.005) % 1;
+  var alpha = 0.025 + 0.01*Math.sin(gridFade*Math.PI*2);
+  ctx.save();
+  ctx.strokeStyle = '#004455';
+  ctx.lineWidth = 0.5;
+  ctx.globalAlpha = alpha;
+  var step = 60;
+  for (var x = 0; x < canvas.width; x+=step) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (var y = 0; y < canvas.height; y+=step) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function spawnLizard(size, legs, tail) {
+  resetSim();
+  var s = size;
+  critter = new Creature(innerWidth/2,innerHeight/2,0,s*10,s*2,0.5,16,0.5,0.085,0.5,0.3);
+  var spinal = critter;
+  for (var i = 0; i < 6; i++) {
+    spinal = new Segment(spinal, s*4, 0, Math.PI*2/3, 1.1, '#00ccff');
+    for (var ii = -1; ii <= 1; ii+=2) {
+      var node = new Segment(spinal, s*3, ii, 0.1, 2, '#004466');
+      for (var iii = 0; iii < 3; iii++) node = new Segment(node, s*0.1, -ii*0.1, 0.1, 2, '#003355');
+    }
+  }
+  for (var i = 0; i < legs; i++) {
+    if (i > 0) {
+      for (var ii = 0; ii < 6; ii++) {
+        spinal = new Segment(spinal, s*4, 0, 1.571, 1.5, '#00aacc');
+        for (var iii = -1; iii <= 1; iii+=2) {
+          var node = new Segment(spinal, s*3, iii*1.571, 0.1, 1.5, '#003344');
+          for (var iv = 0; iv < 3; iv++) node = new Segment(node, s*3, -iii*0.3, 0.1, 2, '#002233');
+        }
+      }
+    }
+    for (var ii = -1; ii <= 1; ii+=2) {
+      var node = new Segment(spinal, s*12, ii*0.785, 0, 8, '#00ff88');
+      node = new Segment(node, s*16, -ii*0.785, 6.28, 1, '#00dd77');
+      node = new Segment(node, s*16, ii*1.571, Math.PI, 2, '#00bb66');
+      for (var iii = 0; iii < 4; iii++)
+        new Segment(node, s*4, (iii/3-0.5)*1.571, 0.1, 4, '#00aa55');
+      new LegSystem(node, 3, s*12, critter);
+    }
+  }
+  for (var i = 0; i < tail; i++) {
+    spinal = new Segment(spinal, s*4, 0, Math.PI*2/3, 1.1, lerpColor('#00ccff','#002244',i/tail));
+    for (var ii = -1; ii <= 1; ii+=2) {
+      var node = new Segment(spinal, s*3, ii, 0.1, 2, '#003355');
+      for (var iii = 0; iii < 3; iii++)
+        node = new Segment(node, s*3*(tail-i)/tail, -ii*0.1, 0.1, 2, '#002244');
+    }
+  }
+  startLoop();
+}
+
+function lerpColor(a, b, t) {
+  var ah = parseInt(a.slice(1),16), bh = parseInt(b.slice(1),16);
+  var ar=(ah>>16)&0xff, ag=(ah>>8)&0xff, ab=ah&0xff;
+  var br=(bh>>16)&0xff, bg=(bh>>8)&0xff, bb=bh&0xff;
+  var r=Math.round(ar+(br-ar)*t), g=Math.round(ag+(bg-ag)*t), bl_=Math.round(ab+(bb-ab)*t);
+  return '#'+((1<<24)+(r<<16)+(g<<8)+bl_).toString(16).slice(1);
+}
+
+function spawnRandom() {
+  var legNum = Math.floor(1+Math.random()*12);
+  spawnLizard(8/Math.sqrt(legNum), legNum, Math.floor(4+Math.random()*legNum*8));
+}
+function spawnCentipede() { spawnLizard(2, 20, 40); }
+function spawnSpider()    { spawnLizard(4, 4, 6); }
+function spawnSerpent()   { spawnLizard(3, 1, 60); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+ctx.fillStyle = '#000';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+var legNum = Math.floor(1+Math.random()*12);
+spawnLizard(8/Math.sqrt(legNum), legNum, Math.floor(4+Math.random()*legNum*8));
+</script>
+</body>
+</html>
