@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reptile Interactive Cursor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            color: white;
+            font-family: sans-serif;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            max-width: 90%;
+        }
+        button {
+            background: #222;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #444;
+            border-color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <button onclick="setMode('random_lizard')">Random Lizard</button>
+        <button onclick="setMode('snake')">Snake</button>
+        <button onclick="setMode('centipede')">Centipede</button>
+        <button onclick="setMode('spider')">Spider</button>
+        <button onclick="setMode('tentacle')">Tentacle</button>
+        <button onclick="setMode('simple')">Simple String</button>
+    </div>
+    
+    <script src="./script.js"></script>
+</body>
+</html>
