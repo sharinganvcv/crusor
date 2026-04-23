@@ -4,48 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reptile Interactive Cursor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #2ecc71;
+            --bg: #0a0a0a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
         body {
             margin: 0;
             overflow: hidden;
-            background-color: black;
+            background-color: var(--bg);
             color: white;
-            font-family: sans-serif;
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
         }
         #ui {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 30px;
+            left: 30px;
             z-index: 10;
             display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 25px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            max-width: 300px;
+        }
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            margin: 0 0 15px 0;
+            font-size: 0.85rem;
+            opacity: 0.6;
+            line-height: 1.4;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            flex-wrap: wrap;
-            max-width: 90%;
         }
         button {
-            background: #222;
+            background: rgba(255, 255, 255, 0.03);
             color: white;
-            border: 1px solid #555;
-            padding: 8px 15px;
+            border: 1px solid var(--glass-border);
+            padding: 10px;
             cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
         button:hover {
-            background: #444;
-            border-color: #777;
+            background: var(--primary);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+            border-color: transparent;
+        }
+        button.active {
+            background: var(--primary);
+            color: #000;
+        }
+        .hint {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.4;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
     <div id="ui">
-        <button onclick="setMode('random_lizard')">Random Lizard</button>
-        <button onclick="setMode('snake')">Snake</button>
-        <button onclick="setMode('centipede')">Centipede</button>
-        <button onclick="setMode('spider')">Spider</button>
-        <button onclick="setMode('tentacle')">Tentacle</button>
-        <button onclick="setMode('simple')">Simple String</button>
+        <h1>Kinetic Life</h1>
+        <p>Interactive procedural creatures that follow your cursor. Choose a specimen below.</p>
+        <div class="btn-group">
+            <button onclick="changeMode('random_lizard', this)" class="active">Lizard</button>
+            <button onclick="changeMode('snake', this)">Snake</button>
+            <button onclick="changeMode('centipede', this)">Centipede</button>
+            <button onclick="changeMode('spider', this)">Spider</button>
+            <button onclick="changeMode('tentacle', this)">Tentacle</button>
+            <button onclick="changeMode('simple', this)">String</button>
+        </div>
     </div>
+    <div class="hint">Move your mouse to interact • Click buttons to change form</div>
+
+    <script>
+        function changeMode(mode, btn) {
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.setMode(mode);
+        }
+    </script>
     
     <script src="./script.js"></script>
 </body>
