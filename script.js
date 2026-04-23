@@ -73,7 +73,12 @@ class Segment {
     this.absAngle = parent.absAngle + angle; //Angle relative to x-axis
     this.range = range; //Difference between maximum and minimum angles
     this.stiffness = stiffness; //How closely it conforms to default angle
+    this.type = 'body'; // Default type
     this.updateRelative(false, true);
+  }
+  setType(type) {
+    this.type = type;
+    return this;
   }
   updateRelative(iter, flex) {
     this.relAngle =
@@ -105,45 +110,53 @@ class Segment {
   }
   draw(iter, depth = 0) {
     let mode = window.currentCreatureType || 'random_lizard';
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'white';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     if (mode === 'snake') {
-      ctx.strokeStyle = depth % 4 < 2 ? '#4CAF50' : '#2E7D32';
-      ctx.lineWidth = Math.max(2, 28 - depth * 0.5);
+      ctx.strokeStyle = `hsl(140, 50%, ${Math.max(20, 60 - depth * 0.3)}%)`;
+      ctx.lineWidth = Math.max(3, 22 - depth * 0.25);
     } else if (mode === 'centipede') {
-      if (this.children.length === 0) {
+      if (this.type === 'leg') {
         ctx.strokeStyle = '#E67E22';
         ctx.lineWidth = 2;
       } else {
         ctx.strokeStyle = depth % 2 === 0 ? '#873600' : '#D35400';
-        ctx.lineWidth = Math.max(4, 22 - depth * 0.4);
+        ctx.lineWidth = Math.max(8, 16 - depth * 0.1);
       }
     } else if (mode === 'spider') {
-      ctx.strokeStyle = depth % 4 < 2 ? '#222' : '#d35400';
-      ctx.lineWidth = Math.max(1, 16 - depth * 0.4);
+      ctx.strokeStyle = depth < 3 ? '#111' : '#222';
+      ctx.lineWidth = Math.max(2, 10 - depth * 0.5);
     } else if (mode === 'tentacle') {
-      let light = 40 + (depth % 3) * 10 - depth * 0.5;
-      ctx.strokeStyle = `hsl(280, 80%, ${light}%)`;
-      ctx.lineWidth = Math.max(2, 35 - depth * 1.0);
+      ctx.strokeStyle = `hsl(280, 80%, ${Math.max(20, 50 - depth * 1.2)}%)`;
+      ctx.lineWidth = Math.max(2, 25 - depth * 1.5);
     } else if (mode === 'random_lizard') {
-      if (this.children.length === 0) {
+      if (this.type === 'leg') {
         ctx.strokeStyle = '#2ecc71';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
       } else {
-        ctx.strokeStyle = depth % 3 === 0 ? '#1E8449' : '#27AE60';
-        ctx.lineWidth = Math.max(3, 20 - depth * 0.3);
+        ctx.strokeStyle = depth % 2 === 0 ? '#1E8449' : '#27AE60';
+        ctx.lineWidth = Math.max(6, 18 - depth * 0.5);
       }
     } else {
-      ctx.lineWidth = depth % 2 === 0 ? 6 : 4;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = Math.max(1, 10 - depth * 0.2);
     }
 
     ctx.beginPath();
     ctx.moveTo(this.parent.x, this.parent.y);
     ctx.lineTo(this.x, this.y);
     ctx.stroke();
+
+    // Add some volume/meat to the body
+    if (this.type === 'spine' || this.type === 'body') {
+        if (depth % 2 === 0) {
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
 
     if (iter) {
       for (var i = 0; i < this.children.length; i++) {
@@ -370,79 +383,109 @@ class Creature {
 
     if (mode === 'snake') {
       ctx.strokeStyle = '#4CAF50';
-      ctx.fillStyle = '#2e7d32';
-      ctx.lineWidth = 2;
+      ctx.fillStyle = '#1B5E20';
     } else if (mode === 'centipede') {
       ctx.strokeStyle = '#d35400';
-      ctx.fillStyle = '#a04000';
-      ctx.lineWidth = 3;
+      ctx.fillStyle = '#5D2300';
     } else if (mode === 'spider') {
-      ctx.strokeStyle = '#2c3e50';
-      ctx.fillStyle = '#1a252f';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = '#111';
     } else if (mode === 'tentacle') {
-      ctx.strokeStyle = 'hsl(280, 80%, 50%)';
-      ctx.fillStyle = 'hsl(280, 80%, 40%)';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'hsl(280, 80%, 40%)';
+      ctx.fillStyle = 'hsl(280, 80%, 30%)';
     } else if (mode === 'random_lizard') {
-      ctx.strokeStyle = '#27ae60';
-      ctx.fillStyle = '#2ecc71';
-      ctx.lineWidth = 2;
-    } else {
-      ctx.strokeStyle = 'white';
-      ctx.fillStyle = 'black';
+      ctx.strokeStyle = '#1E8449';
+      ctx.fillStyle = '#27AE60';
     }
 
     var r = 7;
-    if (mode === 'spider') r = 16;
-    else if (mode === 'tentacle') r = 18;
-    else if (mode === 'snake') r = 14;
-    else if (mode === 'centipede') r = 12;
-    else if (mode === 'random_lizard') r = 11;
+    if (mode === 'spider') r = 18;
+    else if (mode === 'tentacle') r = 20;
+    else if (mode === 'snake') r = 16;
+    else if (mode === 'centipede') r = 14;
+    else if (mode === 'random_lizard') r = 14;
 
+    // Head shape
     ctx.beginPath();
-    if (mode === 'snake' || mode === 'spider' || mode === 'tentacle') {
+    if (mode === 'snake') {
+      // Diamond/Triangular snake head
+      let headLen = r * 1.5;
+      let ang = this.absAngle;
+      ctx.moveTo(this.x + Math.cos(ang) * headLen, this.y + Math.sin(ang) * headLen);
+      ctx.lineTo(this.x + Math.cos(ang + 2) * r, this.y + Math.sin(ang + 2) * r);
+      ctx.lineTo(this.x + Math.cos(ang - 2) * r, this.y + Math.sin(ang - 2) * r);
+      ctx.closePath();
+    } else if (mode === 'spider') {
+      // Two-part spider body (head part)
       ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    } else if (mode === 'random_lizard') {
+      // Elongated lizard head
+      let ang = this.absAngle;
+      ctx.ellipse(this.x, this.y, r * 1.2, r * 0.8, ang, 0, Math.PI * 2);
     } else {
-      ctx.arc(this.x, this.y, r, Math.PI / 4 + this.absAngle, 7 * Math.PI / 4 + this.absAngle);
-      ctx.moveTo(this.x + r * Math.cos(7 * Math.PI / 4 + this.absAngle), this.y + r * Math.sin(7 * Math.PI / 4 + this.absAngle));
-      ctx.lineTo(this.x + r * Math.cos(this.absAngle) * 2 ** 0.5, this.y + r * Math.sin(this.absAngle) * 2 ** 0.5);
-      ctx.lineTo(this.x + r * Math.cos(Math.PI / 4 + this.absAngle), this.y + r * Math.sin(Math.PI / 4 + this.absAngle));
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
     }
 
     if (ctx.fillStyle !== 'transparent') ctx.fill();
     ctx.stroke();
 
+    // Eyes and Details
     if (mode === 'snake' || mode === 'random_lizard' || mode === 'spider' || mode === 'centipede') {
-      ctx.fillStyle = mode === 'spider' ? '#e74c3c' : 'white';
-      var eyeDist = mode === 'spider' ? 0.3 : 0.5;
-      var eyeSize = mode === 'spider' ? 2.5 : 2;
-
-      ctx.beginPath();
-      ctx.arc(this.x + Math.cos(this.absAngle - eyeDist) * (r * 0.6), this.y + Math.sin(this.absAngle - eyeDist) * (r * 0.6), eyeSize, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(this.x + Math.cos(this.absAngle + eyeDist) * (r * 0.6), this.y + Math.sin(this.absAngle + eyeDist) * (r * 0.6), eyeSize, 0, Math.PI * 2);
-      ctx.fill();
-
+      let eyeColor = 'white';
+      let pupilColor = 'black';
       if (mode === 'spider') {
-        ctx.beginPath();
-        ctx.arc(this.x + Math.cos(this.absAngle - 0.8) * (r * 0.6), this.y + Math.sin(this.absAngle - 0.8) * (r * 0.6), 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(this.x + Math.cos(this.absAngle + 0.8) * (r * 0.6), this.y + Math.sin(this.absAngle + 0.8) * (r * 0.6), 1.5, 0, Math.PI * 2);
-        ctx.fill();
+          eyeColor = '#ff3333';
+          pupilColor = 'white';
       }
 
+      var eyeDist = 0.5;
+      var eyeSize = 3;
+      var headOffset = r * 0.5;
+
       if (mode === 'snake') {
-        ctx.strokeStyle = '#e74c3c';
-        ctx.lineWidth = 1.5;
+          eyeDist = 0.8;
+          eyeSize = 2.5;
+          headOffset = r * 0.6;
+          eyeColor = '#FFD700'; // Yellow snake eyes
+      }
+
+      // Draw eyes
+      const drawEye = (angleOffset, size, dist) => {
+          let ex = this.x + Math.cos(this.absAngle + angleOffset) * dist;
+          let ey = this.y + Math.sin(this.absAngle + angleOffset) * dist;
+          ctx.fillStyle = eyeColor;
+          ctx.beginPath();
+          ctx.arc(ex, ey, size, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = pupilColor;
+          ctx.beginPath();
+          ctx.arc(ex + Math.cos(this.absAngle) * size * 0.4, ey + Math.sin(this.absAngle) * size * 0.4, size * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+      };
+
+      if (mode === 'spider') {
+          // 8 eyes for spider
+          for(let i=-2; i<=2; i++) {
+              if (i===0) continue;
+              drawEye(i*0.3, 2, r * 0.7);
+              drawEye(i*0.6, 1.5, r * 0.5);
+          }
+      } else {
+          drawEye(-eyeDist, eyeSize, headOffset);
+          drawEye(eyeDist, eyeSize, headOffset);
+      }
+
+      // Snake tongue
+      if (mode === 'snake' && Math.random() > 0.8) {
+        ctx.strokeStyle = '#ff4d4d';
+        ctx.lineWidth = 2;
+        let tx = this.x + Math.cos(this.absAngle) * (r * 1.5);
+        let ty = this.y + Math.sin(this.absAngle) * (r * 1.5);
         ctx.beginPath();
-        ctx.moveTo(this.x + Math.cos(this.absAngle) * r, this.y + Math.sin(this.absAngle) * r);
-        ctx.lineTo(this.x + Math.cos(this.absAngle) * (r + 10), this.y + Math.sin(this.absAngle) * (r + 10));
-        ctx.lineTo(this.x + Math.cos(this.absAngle - 0.3) * (r + 15), this.y + Math.sin(this.absAngle - 0.3) * (r + 15));
-        ctx.moveTo(this.x + Math.cos(this.absAngle) * (r + 10), this.y + Math.sin(this.absAngle) * (r + 10));
-        ctx.lineTo(this.x + Math.cos(this.absAngle + 0.3) * (r + 15), this.y + Math.sin(this.absAngle + 0.3) * (r + 15));
+        ctx.moveTo(tx, ty);
+        let flick = Math.sin(Date.now() * 0.1) * 5;
+        ctx.lineTo(tx + Math.cos(this.absAngle) * 12, ty + Math.sin(this.absAngle) * 12 + flick);
         ctx.stroke();
       }
     }
@@ -505,16 +548,17 @@ function setupTentacle() {
   );
   var node = critter;
   //(parent,size,angle,range,stiffness)
-  for (var i = 0; i < 32; i++) {
-    var node = new Segment(node, 8, 0, 2, 1);
+  for (var i = 0; i < 20; i++) {
+    var node = new Segment(node, 8, 0, 2, 1).setType('tentacle');
   }
   //(end,length,speed,creature)
-  var tentacle = new LimbSystem(node, 32, 8, critter);
+  var tentacle = new LimbSystem(node, 20, 12, critter);
   startAnimation(function () {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     critter.follow(canvas.width / 2, canvas.height / 2);
     ctx.beginPath();
-    ctx.arc(Input.mouse.x, Input.mouse.y, 2, 0, 6.283);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.arc(Input.mouse.x, Input.mouse.y, 4, 0, 6.283);
     ctx.fill();
   });
 }
@@ -564,18 +608,18 @@ function setupTestSquid(size, legs) {
     0.3
   );
   var legNum = legs;
-  var jointNum = 32;
+  var jointNum = 12;
   for (var i = 0; i < legNum; i++) {
     var node = critter;
     var ang = Math.PI / 2 * (i / (legNum - 1) - 0.5);
     for (var ii = 0; ii < jointNum; ii++) {
       var node = new Segment(
         node,
-        size * 64 / jointNum,
+        size * 40 / jointNum,
         ang * (ii == 0),
         3.1416,
         1.2
-      );
+      ).setType('leg');
     }
     //(end,length,speed,creature,dist)
     var leg = new LegSystem(node, jointNum, size * 30, critter);
@@ -604,53 +648,26 @@ function setupLizard(size, legs, tail) {
   var spinal = critter;
   //(parent,size,angle,range,stiffness)
   //Neck
-  for (var i = 0; i < 6; i++) {
-    spinal = new Segment(spinal, s * 4, 0, 3.1415 * 2 / 3, 1.1);
-    for (var ii = -1; ii <= 1; ii += 2) {
-      var node = new Segment(spinal, s * 3, ii, 0.1, 2);
-      for (var iii = 0; iii < 3; iii++) {
-        node = new Segment(node, s * 0.1, -ii * 0.1, 0.1, 2);
-      }
-    }
+  for (var i = 0; i < 4; i++) {
+    spinal = new Segment(spinal, s * 6, 0, 1.1, 1).setType('spine');
   }
   //Torso and legs
   for (var i = 0; i < legs; i++) {
-    if (i > 0) {
-      //Vertebrae and ribs
-      for (var ii = 0; ii < 6; ii++) {
-        spinal = new Segment(spinal, s * 4, 0, 1.571, 1.5);
-        for (var iii = -1; iii <= 1; iii += 2) {
-          var node = new Segment(spinal, s * 3, iii * 1.571, 0.1, 1.5);
-          for (var iv = 0; iv < 3; iv++) {
-            node = new Segment(node, s * 3, -iii * 0.3, 0.1, 2);
-          }
-        }
-      }
+    //Vertebrae between legs
+    for (var ii = 0; ii < 4; ii++) {
+      spinal = new Segment(spinal, s * 6, 0, 1.1, 1).setType('spine');
     }
-    //Legs and shoulders
+    //Legs
     for (var ii = -1; ii <= 1; ii += 2) {
-      var node = new Segment(spinal, s * 12, ii * 0.785, 0, 8); //Hip
-      node = new Segment(node, s * 16, -ii * 0.785, 6.28, 1); //Humerus
-      node = new Segment(node, s * 16, ii * 1.571, 3.1415, 2); //Forearm
-      for (
-        var iii = 0;
-        iii < 4;
-        iii++ //fingers
-      ) {
-        new Segment(node, s * 4, (iii / 3 - 0.5) * 1.571, 0.1, 4);
-      }
-      new LegSystem(node, 3, s * 12, critter, 4);
+      var node = new Segment(spinal, s * 8, ii * 1.2, 0.1, 4).setType('leg'); // Hip
+      node = new Segment(node, s * 10, -ii * 1.2, 0.5, 2).setType('leg'); // Knee
+      node = new Segment(node, s * 8, ii * 1.2, 0.5, 2).setType('leg'); // Ankle
+      new LegSystem(node, 3, s * 12, critter);
     }
   }
   //Tail
   for (var i = 0; i < tail; i++) {
-    spinal = new Segment(spinal, s * 4, 0, 3.1415 * 2 / 3, 1.1);
-    for (var ii = -1; ii <= 1; ii += 2) {
-      var node = new Segment(spinal, s * 3, ii, 0.1, 2);
-      for (var iii = 0; iii < 3; iii++) {
-        node = new Segment(node, s * 3 * (tail - i) / tail, -ii * 0.1, 0.1, 2);
-      }
-    }
+    spinal = new Segment(spinal, s * 6, 0, 1.1, 1).setType('spine');
   }
   startAnimation(function () {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -665,18 +682,18 @@ ctx.strokeStyle = "white";
 window.setMode = function (mode) {
   window.currentCreatureType = mode;
   if (mode === 'random_lizard') {
-    var legNum = Math.floor(1 + Math.random() * 12);
+    var legNum = Math.floor(2 + Math.random() * 2); // 2 or 3 pairs
     setupLizard(
-      8 / Math.sqrt(legNum),
+      1.2,
       legNum,
-      Math.floor(4 + Math.random() * legNum * 8)
+      12
     );
   } else if (mode === 'snake') {
-    setupLizard(1.2, 0, 40); // 0 legs, long tail
+    setupLizard(1.4, 0, 40); // 0 legs, long tail
   } else if (mode === 'centipede') {
-    setupLizard(0.5, 40, 20); // many legs
+    setupLizard(0.8, 12, 4); // moderate legs, short tail
   } else if (mode === 'spider') {
-    setupTestSquid(2, 8); // 8 legs 
+    setupTestSquid(2.5, 8); // 8 legs 
   } else if (mode === 'tentacle') {
     setupTentacle();
   } else if (mode === 'simple') {
